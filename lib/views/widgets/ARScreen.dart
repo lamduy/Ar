@@ -81,8 +81,7 @@ class _ARScreenState extends State<ARScreen> {
                             _viewModel.notifyListeners();
                           }
                         },
-                        planeDetectionConfig:
-                            PlaneDetectionConfig.horizontalAndVertical,
+                        planeDetectionConfig: PlaneDetectionConfig.horizontal,
                       )
                     : _buildErrorUI(),
               ),
@@ -335,7 +334,10 @@ class _ARScreenState extends State<ARScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => {
+                Navigator.pop(context),
+                _viewModel.disposeSession(),
+              },
               child: const Text('Quay lại'),
             ),
             const SizedBox(height: 8),

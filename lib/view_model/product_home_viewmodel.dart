@@ -15,6 +15,30 @@ class ProductHomeViewModel extends ChangeNotifier {
       price: 890.00,
       color: Color(0xFF2F3E33),
     ),
+    ProductArrival(
+      name: 'Luna Coffee Table1',
+      edition: 'NATURAL STONE EDITION',
+      price: 890.00,
+      color: Color.fromARGB(255, 133, 10, 37),
+    ),
+    ProductArrival(
+      name: 'Luna Coffee Table2',
+      edition: 'NATURAL STONE EDITION',
+      price: 890.00,
+      color: Color.fromARGB(255, 228, 228, 228),
+    ),
+    ProductArrival(
+      name: 'Luna Coffee Table3',
+      edition: 'NATURAL STONE EDITION',
+      price: 890.00,
+      color: Color.fromARGB(255, 223, 105, 105),
+    ),
+    ProductArrival(
+      name: 'Luna Coffee Table4',
+      edition: 'NATURAL STONE EDITION',
+      price: 890.00,
+      color: Color.fromARGB(255, 153, 184, 161),
+    ),
   ];
 
   final List<HomeCategory> _categories = const [
