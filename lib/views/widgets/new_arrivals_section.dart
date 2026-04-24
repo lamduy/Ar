@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:world_casa/model/home_models.dart';
 
 class NewArrivalsSection extends StatelessWidget {
-  final List<ProductArrival> items;
+  final List<Product> items;
   final ValueChanged<int>? onItemTap;
   final String title;
   final String label;

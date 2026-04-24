@@ -2,38 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:world_casa/model/home_models.dart';
 
 class ProductHomeViewModel extends ChangeNotifier {
-  final List<ProductArrival> _arrivals = const [
-    ProductArrival(
+  final List<Product> _arrivals = const [
+    Product(
       name: 'The Aurelius Armchair',
       edition: 'COGNAC LEATHER EDITION',
       price: 1240.00,
       color: Color(0xFF9E3A2B),
     ),
-    ProductArrival(
+    Product(
       name: 'Luna Coffee Table',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color(0xFF2F3E33),
     ),
-    ProductArrival(
+    Product(
       name: 'Luna Coffee Table1',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color.fromARGB(255, 133, 10, 37),
     ),
-    ProductArrival(
+    Product(
       name: 'Luna Coffee Table2',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color.fromARGB(255, 228, 228, 228),
     ),
-    ProductArrival(
+    Product(
       name: 'Luna Coffee Table3',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color.fromARGB(255, 223, 105, 105),
     ),
-    ProductArrival(
+    Product(
       name: 'Luna Coffee Table4',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
@@ -54,11 +54,11 @@ class ProductHomeViewModel extends ChangeNotifier {
 
   int _selectedIndex = -1;
 
-  List<ProductArrival> get arrivals => List.unmodifiable(_arrivals);
+  List<Product> get arrivals => List.unmodifiable(_arrivals);
   List<HomeCategory> get categories => List.unmodifiable(_categories);
   int get selectedIndex => _selectedIndex;
 
-  ProductArrival? get selectedProduct {
+  Product? get selectedProduct {
     if (_selectedIndex < 0 || _selectedIndex >= _arrivals.length) {
       return null;
     }
