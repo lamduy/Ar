@@ -67,7 +67,7 @@ class ARViewModel extends ChangeNotifier {
       await arSessionManager!.onInitialize(
         showAnimatedGuide: true,
         showPlanes: true,
-        showFeaturePoints: true,
+        //showFeaturePoints: true,
         showWorldOrigin: false,
         handleTaps: true,
       );

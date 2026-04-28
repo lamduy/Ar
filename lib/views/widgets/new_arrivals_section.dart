@@ -67,13 +67,14 @@ class NewArrivalsSection extends StatelessWidget {
                             color: item.color,
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          child: const Center(
-                            child: Icon(
-                              Icons.chair,
-                              size: 150,
-                              color: Colors.white70,
-                            ),
+                          //child: Center(
+                          child: Image(
+                            image: item.image.isNotEmpty
+                                ? AssetImage(item.image)
+                                : AssetImage('assets/placeholder.png'),
+                            fit: BoxFit.cover,
                           ),
+                          //),
                         ),
                       ),
                       const SizedBox(height: 16),

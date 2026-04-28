@@ -5,12 +5,14 @@ class Product {
   final String edition;
   final double price;
   final Color color;
+  final String image;
 
   const Product({
     required this.name,
     required this.edition,
     required this.price,
     required this.color,
+    required this.image,
   });
 }
 

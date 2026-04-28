@@ -10,12 +10,14 @@ class WishListScreen extends StatelessWidget {
       edition: "Personal Curation Edition",
       price: 2450.00,
       color: Color(0xFFE5E5E5),
+      image: 'assets/banner_home.jpg',
     ),
     Product(
       name: "ARCHITECTURAL ARMCHAIR",
       edition: "Limited Statement Series",
       price: 1800.00,
       color: Color(0xFFD4CFC9),
+      image: 'assets/banner_home.jpg',
     ),
   ];
 
@@ -103,44 +105,47 @@ class WishListScreen extends StatelessWidget {
                 ), // Dùng màu từ class Product làm nền
                 border: Border.all(color: Colors.black12, width: 0.5),
               ),
-              child: Stack(
-                children: [
-                  const Center(
-                    child: Icon(
-                      Icons.chair_outlined,
-                      size: 80,
-                      color: Colors.black12,
-                    ),
+              child:
+                  // Stack(
+                  //   children: [
+                  // Center(
+                  //   child:
+                  Image(
+                    image: product.image.isNotEmpty
+                        ? AssetImage(product.image)
+                        : AssetImage('assets/placeholder.png'),
+                    fit: BoxFit.cover,
                   ),
-                  // Nút xóa (Top Right)
-                  Positioned(
-                    top: 16,
-                    right: 16,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        size: 20,
-                        color: Colors.black,
-                      ),
-                      onPressed: () {},
-                    ),
-                  ),
-                  // Nút AR (Bottom Right)
-                  // Positioned(
-                  //   bottom: 16,
-                  //   right: 16,
-                  //   child: FloatingActionButton.small(
-                  //     heroTag: product.name,
-                  //     elevation: 0,
-                  //     backgroundColor: Colors.black,
-                  //     child: const Icon(Icons.view_in_ar, color: Colors.white),
-                  //     onPressed: () {},
-                  //   ),
-                  // ),
-                ],
-              ),
+              //),
+              // Nút xóa (Top Right)
+              // Positioned(
+              //   top: 16,
+              //   right: 16,
+              //   child: IconButton(
+              //     icon: const Icon(
+              //       Icons.close,
+              //       size: 20,
+              //       color: Colors.black,
+              //     ),
+              //     onPressed: () {},
+              //   ),
+              // ),
+              // Nút AR (Bottom Right)
+              // Positioned(
+              //   bottom: 16,
+              //   right: 16,
+              //   child: FloatingActionButton.small(
+              //     heroTag: product.name,
+              //     elevation: 0,
+              //     backgroundColor: Colors.black,
+              //     child: const Icon(Icons.view_in_ar, color: Colors.white),
+              //     onPressed: () {},
+              //   ),
+              // ),
+              //],
             ),
           ),
+          //),
           const SizedBox(height: 16),
           // Thông tin sản phẩm từ Class
           Text(

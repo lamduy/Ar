@@ -8,36 +8,42 @@ class ProductHomeViewModel extends ChangeNotifier {
       edition: 'COGNAC LEATHER EDITION',
       price: 1240.00,
       color: Color(0xFF9E3A2B),
+      image: 'assets/banner_home.jpg',
     ),
     Product(
       name: 'Luna Coffee Table',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color(0xFF2F3E33),
+      image: 'assets/banner_home.jpg',
     ),
     Product(
       name: 'Luna Coffee Table1',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color.fromARGB(255, 133, 10, 37),
+      image: 'assets/banner_home.jpg',
     ),
     Product(
       name: 'Luna Coffee Table2',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color.fromARGB(255, 228, 228, 228),
+      image: 'assets/banner_home.jpg',
     ),
     Product(
       name: 'Luna Coffee Table3',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color.fromARGB(255, 223, 105, 105),
+      image: 'assets/banner_home.jpg',
     ),
     Product(
       name: 'Luna Coffee Table4',
       edition: 'NATURAL STONE EDITION',
       price: 890.00,
       color: Color.fromARGB(255, 153, 184, 161),
+      image: 'assets/banner_home.jpg',
     ),
   ];
 
