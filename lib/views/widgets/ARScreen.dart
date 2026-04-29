@@ -1,5 +1,5 @@
-import 'package:ar_flutter_plugin/datatypes/config_planedetection.dart';
-import 'package:ar_flutter_plugin/widgets/ar_view.dart';
+import 'package:ar_flutter_plugin_2/datatypes/config_planedetection.dart';
+import 'package:ar_flutter_plugin_2/widgets/ar_view.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:world_casa/model/ar_model.dart';
@@ -355,3 +355,5 @@ class _ARScreenState extends State<ARScreen> {
     );
   }
 }
+
+

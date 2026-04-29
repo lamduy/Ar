@@ -28,6 +28,10 @@ subprojects {
 subprojects {
     pluginManager.withPlugin("com.android.library") {
         val androidExt = extensions.findByName("android") ?: return@withPlugin
+        val isArPlugin2Project = project.name.contains("ar_flutter_plugin_2") ||
+            project.path.contains("ar_flutter_plugin_2")
+        val isLegacyArPluginProject = (project.name.contains("ar_flutter_plugin") ||
+            project.path.contains("ar_flutter_plugin")) && !isArPlugin2Project
 
         val currentNamespace = runCatching {
             androidExt.javaClass.getMethod("getNamespace").invoke(androidExt) as? String
@@ -53,12 +57,34 @@ subprojects {
                 .getMethod("setNamespace", String::class.java)
                 .invoke(androidExt, fallbackNamespace)
         }
+
+        // ar_flutter_plugin_2 must align to Java 17 (its Java task is 17).
+        // Legacy AR plugin variants stay on Java 8.
+        runCatching {
+            val compileOptions = androidExt.javaClass.getMethod("getCompileOptions").invoke(androidExt)
+            val javaVersionClass = Class.forName("org.gradle.api.JavaVersion")
+            val version = if (isArPlugin2Project) {
+                javaVersionClass.getField("VERSION_17").get(null)
+            } else if (isLegacyArPluginProject) {
+                javaVersionClass.getField("VERSION_1_8").get(null)
+            } else {
+                javaVersionClass.getField("VERSION_17").get(null)
+            }
+            compileOptions.javaClass.getMethod("setSourceCompatibility", javaVersionClass)
+                .invoke(compileOptions, version)
+            compileOptions.javaClass.getMethod("setTargetCompatibility", javaVersionClass)
+                .invoke(compileOptions, version)
+        }
     }
 }
 
 subprojects {
     tasks.withType(org.gradle.api.tasks.compile.JavaCompile::class.java).configureEach {
-        val jvmTarget = if (project.name == "ar_flutter_plugin") "1.8" else "17"
+        val isArPlugin2Project = project.name.contains("ar_flutter_plugin_2") ||
+            project.path.contains("ar_flutter_plugin_2")
+        val isLegacyArPluginProject = (project.name.contains("ar_flutter_plugin") ||
+            project.path.contains("ar_flutter_plugin")) && !isArPlugin2Project
+        val jvmTarget = if (isArPlugin2Project) "17" else if (isLegacyArPluginProject) "1.8" else "17"
         sourceCompatibility = jvmTarget
         targetCompatibility = jvmTarget
     }
@@ -68,7 +94,11 @@ subprojects {
 
         runCatching {
             val kotlinOptions = javaClass.getMethod("getKotlinOptions").invoke(this)
-            val jvmTarget = if (project.name == "ar_flutter_plugin") "1.8" else "17"
+            val isArPlugin2Project = project.name.contains("ar_flutter_plugin_2") ||
+                project.path.contains("ar_flutter_plugin_2")
+            val isLegacyArPluginProject = (project.name.contains("ar_flutter_plugin") ||
+                project.path.contains("ar_flutter_plugin")) && !isArPlugin2Project
+            val jvmTarget = if (isArPlugin2Project) "17" else if (isLegacyArPluginProject) "1.8" else "17"
             kotlinOptions.javaClass.getMethod("setJvmTarget", String::class.java)
                 .invoke(kotlinOptions, jvmTarget)
         }
