@@ -15,6 +15,11 @@ import 'package:vector_math/vector_math_64.dart' as vector;
 import 'package:world_casa/model/ar_model.dart';
 
 class ARViewModel extends ChangeNotifier {
+  static const int _maxPlacedNodes = 3;
+  static const Duration _tapDebounce = Duration(milliseconds: 350);
+  static const Duration _placementCooldown = Duration(milliseconds: 900);
+  static const Duration _planeStabilityWindow = Duration(milliseconds: 600);
+
   ARSessionManager? arSessionManager;
   ARObjectManager? arObjectManager;
   ARAnchorManager? arAnchorManager;
@@ -24,11 +29,16 @@ class ARViewModel extends ChangeNotifier {
   int _selectedModelIndex = 0;
   bool _isDisposed = false;
   bool _isPlacingNode = false;
+  bool _isInitializingSession = false;
+  bool _sessionInitialized = false;
   bool isSupported = true;
   String errorMessage = '';
   int planesDetected = 0;
   bool arSessionReady = false;
   final Map<String, String> _glbAssetCache = {};
+  DateTime? _lastTapAt;
+  DateTime? _lastPlacementAt;
+  DateTime? _firstPlaneSeenAt;
 
   final List<ModelOption> modelOptions = const [
     ModelOption(
@@ -45,7 +55,8 @@ class ARViewModel extends ChangeNotifier {
     ARObjectManager objectManager,
     ARAnchorManager anchorManager,
   ) async {
-    if (_isDisposed) return;
+    if (_isDisposed || _isInitializingSession || _sessionInitialized) return;
+    _isInitializingSession = true;
 
     arSessionManager = sessionManager;
     arObjectManager = objectManager;
@@ -53,7 +64,7 @@ class ARViewModel extends ChangeNotifier {
 
     try {
       await arSessionManager!.onInitialize(
-        showAnimatedGuide: true,
+        showAnimatedGuide: false,
         showPlanes: true,
         showFeaturePoints: true,
         showWorldOrigin: false,
@@ -68,6 +79,7 @@ class ARViewModel extends ChangeNotifier {
       arSessionManager?.onPlaneOrPointTap = handlePlaneTap;
       isSupported = true;
       arSessionReady = true;
+      _sessionInitialized = true;
       errorMessage = '';
       notifyListeners();
     } on Exception catch (e, stackTrace) {
@@ -82,6 +94,8 @@ class ARViewModel extends ChangeNotifier {
       debugPrint('Unexpected error: $errorMessage');
       debugPrint('Stack trace: $stackTrace');
       notifyListeners();
+    } finally {
+      _isInitializingSession = false;
     }
   }
 
@@ -92,8 +106,31 @@ class ARViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setInitializationError(String message) {
+    isSupported = false;
+    errorMessage = message;
+    notifyListeners();
+  }
+
   Future<void> handlePlaneTap(List<ARHitTestResult> hitTestResults) async {
     if (_isDisposed || _isPlacingNode) return;
+    final now = DateTime.now();
+    if (_lastTapAt != null && now.difference(_lastTapAt!) < _tapDebounce) {
+      return;
+    }
+    _lastTapAt = now;
+
+    if (_lastPlacementAt != null &&
+        now.difference(_lastPlacementAt!) < _placementCooldown) {
+      return;
+    }
+
+    if (_nodes.length >= _maxPlacedNodes) {
+      errorMessage =
+          'Too many objects. Remove some objects before adding more.';
+      notifyListeners();
+      return;
+    }
 
     if (hitTestResults.isEmpty) {
       return;
@@ -110,7 +147,19 @@ class ARViewModel extends ChangeNotifier {
         pointHit = result;
       }
     }
-    final instantHit = planeHit ?? pointHit ?? hitTestResults.first;
+    if (planeHit != null) {
+      _firstPlaneSeenAt ??= now;
+    } else {
+      _firstPlaneSeenAt = null;
+    }
+
+    final planeStable =
+        planeHit != null &&
+        _firstPlaneSeenAt != null &&
+        now.difference(_firstPlaneSeenAt!) >= _planeStabilityWindow;
+    final instantHit = planeStable
+        ? planeHit
+        : (pointHit ?? hitTestResults.first);
 
     _isPlacingNode = true;
     planesDetected = hitTestResults.length;
@@ -124,7 +173,7 @@ class ARViewModel extends ChangeNotifier {
       bool? didAddNode;
       ARNode node;
 
-      if (planeHit != null) {
+      if (planeStable) {
         anchor = ARPlaneAnchor(transformation: planeHit.worldTransform);
         final didAddAnchor = await arAnchorManager?.addAnchor(anchor);
         if (didAddAnchor != true) {
@@ -152,6 +201,7 @@ class ARViewModel extends ChangeNotifier {
       }
 
       if (didAddNode == true) {
+        _lastPlacementAt = DateTime.now();
         if (anchor != null) {
           _anchors.add(anchor);
         }
@@ -224,6 +274,8 @@ class ARViewModel extends ChangeNotifier {
     arSessionManager = null;
     arObjectManager = null;
     arAnchorManager = null;
+    _sessionInitialized = false;
+    _isInitializingSession = false;
   }
 
   void selectModel(int index) {
@@ -238,4 +290,3 @@ class ARViewModel extends ChangeNotifier {
     super.dispose();
   }
 }
-

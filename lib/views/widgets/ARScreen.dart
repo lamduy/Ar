@@ -62,23 +62,14 @@ class _ARScreenState extends State<ARScreen> {
                 child: _viewModel.isSupported
                     ? ARView(
                         onARViewCreated: (sm, om, am, lm) {
-                          debugPrint(
-                            'ARView created - SM: ${sm != null}, OM: ${om != null}, AM: ${am != null}',
-                          );
                           try {
-                            if (sm != null && om != null && am != null) {
-                              _viewModel.onARViewCreated(sm, om, am);
-                            } else {
-                              debugPrint('❌ Managers are null!');
-                              _viewModel.handleManagersNull();
-                            }
+                            _viewModel.onARViewCreated(sm, om, am);
                           } catch (e, stackTrace) {
-                            debugPrint('❌ Error in onARViewCreated: $e');
+                            debugPrint('AR onARViewCreated error: $e');
                             debugPrint('Stack trace: $stackTrace');
-                            _viewModel.errorMessage =
-                                'Failed to initialize AR: $e';
-                            _viewModel.isSupported = false;
-                            _viewModel.notifyListeners();
+                            _viewModel.setInitializationError(
+                              'Failed to initialize AR: $e',
+                            );
                           }
                         },
                         planeDetectionConfig: PlaneDetectionConfig.horizontal,
