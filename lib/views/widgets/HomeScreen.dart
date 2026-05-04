@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:world_casa/model/home_models.dart';
+import 'package:world_casa/services/native_ar_launcher.dart';
 import 'package:world_casa/view_model/product_home_viewmodel.dart';
 import 'package:world_casa/views/widgets/ARScreen.dart';
 import 'package:world_casa/views/widgets/common_banner.dart';
@@ -40,12 +41,30 @@ class _HomeScreenState extends State<HomeScreen> {
               SizedBox(height: topPadding),
               CommonBanner(
                 imagePath: 'assets/banner_home.jpg',
-                onButtonPressed: () {
+                buttonText: 'Shop now',
+                onButtonPressed: () {},
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    await NativeArLauncher.open();
+                  } catch (e) {
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Cannot open native AR: $e')),
+                    );
+                  }
+                },
+                child: const Text('AR Core'),
+              ),
+              ElevatedButton(
+                onPressed: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (context) => const ARScreen()),
                   );
                 },
+                child: const Text('AR Pluggin'),
               ),
               Container(
                 margin: const EdgeInsets.symmetric(

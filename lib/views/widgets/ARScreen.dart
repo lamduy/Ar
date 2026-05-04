@@ -56,91 +56,68 @@ class _ARScreenState extends State<ARScreen> {
             return _buildPermissionErrorUI();
           }
 
-          return Stack(
-            children: [
-              Positioned.fill(
-                child: _viewModel.isSupported
-                    ? ARView(
-                        onARViewCreated: (sm, om, am, lm) {
-                          try {
-                            _viewModel.onARViewCreated(sm, om, am);
-                          } catch (e, stackTrace) {
-                            debugPrint('AR onARViewCreated error: $e');
-                            debugPrint('Stack trace: $stackTrace');
-                            _viewModel.setInitializationError(
-                              'Failed to initialize AR: $e',
-                            );
-                          }
-                        },
-                        planeDetectionConfig: PlaneDetectionConfig.horizontal,
-                      )
-                    : _buildErrorUI(),
-              ),
-              // Scanning status overlay
-              if (_viewModel.isSupported)
-                Positioned(
-                  top: 10,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          const Text(
-                            'Scanning face...',
-                            style: TextStyle(color: Colors.white, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
+          return ListenableBuilder(
+            listenable: _viewModel,
+            builder: (context, child) {
+              return Stack(
+                children: [
+                  Positioned.fill(
+                    child: _viewModel.isSupported
+                        ? ARView(
+                            onARViewCreated: (sm, om, am, lm) {
+                              try {
+                                _viewModel.onARViewCreated(sm, om, am);
+                              } catch (e, stackTrace) {
+                                debugPrint('AR onARViewCreated error: $e');
+                                debugPrint('Stack trace: $stackTrace');
+                                _viewModel.setInitializationError(
+                                  'Failed to initialize AR: $e',
+                                );
+                              }
+                            },
+                            planeDetectionConfig:
+                                PlaneDetectionConfig.horizontal,
+                          )
+                        : _buildErrorUI(),
                   ),
-                )
-              else
-                Positioned(
-                  top: 10,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        'Drag the camera to find a flat surface and tap to place.',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                    ),
-                  ),
-                ),
-              _buildModelPicker(),
-            ],
+                  if (_viewModel.isSupported) _buildStatusOverlay(),
+                  _buildModelPicker(),
+                ],
+              );
+            },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildStatusOverlay() {
+    final hasError = _viewModel.errorMessage.isNotEmpty;
+    final text = hasError
+        ? _viewModel.errorMessage
+        : _viewModel.isPlacingNode
+        ? 'Placing model...'
+        : 'Move the camera to find a flat surface, then tap the plane.';
+
+    return Positioned(
+      top: 10,
+      left: 16,
+      right: 16,
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: hasError
+                ? Colors.red.withValues(alpha: 0.85)
+                : Colors.black54,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            text,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ),
     );
   }
@@ -346,5 +323,3 @@ class _ARScreenState extends State<ARScreen> {
     );
   }
 }
-
-

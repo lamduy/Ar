@@ -18,7 +18,6 @@ class ARViewModel extends ChangeNotifier {
   static const int _maxPlacedNodes = 3;
   static const Duration _tapDebounce = Duration(milliseconds: 350);
   static const Duration _placementCooldown = Duration(milliseconds: 900);
-  static const Duration _planeStabilityWindow = Duration(milliseconds: 600);
 
   ARSessionManager? arSessionManager;
   ARObjectManager? arObjectManager;
@@ -35,15 +34,15 @@ class ARViewModel extends ChangeNotifier {
   String errorMessage = '';
   int planesDetected = 0;
   bool arSessionReady = false;
+  bool isPlacingNode = false;
   final Map<String, String> _glbAssetCache = {};
   DateTime? _lastTapAt;
   DateTime? _lastPlacementAt;
-  DateTime? _firstPlaneSeenAt;
 
   final List<ModelOption> modelOptions = const [
     ModelOption(
       label: 'Model 3',
-      assetPath: 'assets/glb_models/b1_transformed.glb',
+      assetPath: 'assets/glb_models/Duck.glb',
       scale: 1,
     ),
   ];
@@ -132,37 +131,29 @@ class ARViewModel extends ChangeNotifier {
       return;
     }
 
+    planesDetected = hitTestResults.length;
     if (hitTestResults.isEmpty) {
+      errorMessage = 'No plane detected at the tapped position.';
+      notifyListeners();
       return;
     }
 
     ARHitTestResult? planeHit;
-    ARHitTestResult? pointHit;
     for (final result in hitTestResults) {
       if (result.type == ARHitTestResultType.plane) {
         planeHit = result;
         break;
       }
-      if (result.type == ARHitTestResultType.point && pointHit == null) {
-        pointHit = result;
-      }
     }
-    if (planeHit != null) {
-      _firstPlaneSeenAt ??= now;
-    } else {
-      _firstPlaneSeenAt = null;
+    if (planeHit == null) {
+      errorMessage = 'Tap a detected plane to place the model.';
+      notifyListeners();
+      return;
     }
-
-    final planeStable =
-        planeHit != null &&
-        _firstPlaneSeenAt != null &&
-        now.difference(_firstPlaneSeenAt!) >= _planeStabilityWindow;
-    final instantHit = planeStable
-        ? planeHit
-        : (pointHit ?? hitTestResults.first);
 
     _isPlacingNode = true;
-    planesDetected = hitTestResults.length;
+    isPlacingNode = true;
+    errorMessage = '';
     notifyListeners();
     ARPlaneAnchor? anchor;
 
@@ -173,42 +164,34 @@ class ARViewModel extends ChangeNotifier {
       bool? didAddNode;
       ARNode node;
 
-      if (planeStable) {
-        anchor = ARPlaneAnchor(transformation: planeHit.worldTransform);
-        final didAddAnchor = await arAnchorManager?.addAnchor(anchor);
-        if (didAddAnchor != true) {
-          return;
-        }
-
-        node = ARNode(
-          type: nodeType,
-          uri: nodeUri,
-          scale: vector.Vector3.all(selectedModel.scale),
-          position: vector.Vector3.zero(),
-          rotation: vector.Vector4(1, 0, 0, 0),
-        );
-        didAddNode = await arObjectManager?.addNode(node, planeAnchor: anchor);
-      } else {
-        // Instant placement: place immediately from hit transform without
-        // waiting for a detected plane anchor.
-        node = ARNode(
-          type: nodeType,
-          uri: nodeUri,
-          scale: vector.Vector3.all(selectedModel.scale),
-          transformation: instantHit.worldTransform,
-        );
-        didAddNode = await arObjectManager?.addNode(node);
+      anchor = ARPlaneAnchor(transformation: planeHit.worldTransform);
+      final didAddAnchor = await arAnchorManager?.addAnchor(anchor);
+      if (didAddAnchor != true) {
+        errorMessage = 'Failed to create AR anchor on the selected plane.';
+        notifyListeners();
+        return;
       }
+
+      node = ARNode(
+        type: nodeType,
+        uri: nodeUri,
+        scale: vector.Vector3.all(selectedModel.scale),
+        position: vector.Vector3.zero(),
+        rotation: vector.Vector4(1, 0, 0, 0),
+      );
+      didAddNode = await arObjectManager?.addNode(node, planeAnchor: anchor);
 
       if (didAddNode == true) {
         _lastPlacementAt = DateTime.now();
-        if (anchor != null) {
-          _anchors.add(anchor);
-        }
+        _anchors.add(anchor);
         _nodes.add(node);
+        errorMessage = '';
         notifyListeners();
-      } else if (anchor != null) {
+      } else {
+        errorMessage =
+            'Failed to load model ${selectedModel.assetPath}. Check the GLB file and plugin logs.';
         await arAnchorManager?.removeAnchor(anchor);
+        notifyListeners();
       }
     } catch (e, stackTrace) {
       debugPrint('Error in handlePlaneTap: $e');
@@ -223,6 +206,8 @@ class ARViewModel extends ChangeNotifier {
       } catch (_) {}
     } finally {
       _isPlacingNode = false;
+      isPlacingNode = false;
+      notifyListeners();
     }
   }
 
