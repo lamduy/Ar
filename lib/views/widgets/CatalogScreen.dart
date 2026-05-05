@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:world_casa/views/widgets/ShopByRoomScreen.dart';
 import 'package:world_casa/views/widgets/common_banner.dart';
 
 class CataLogScreen extends StatelessWidget {
@@ -28,20 +29,11 @@ class CataLogScreen extends StatelessWidget {
               onButtonPressed: () {},
             ),
 
-            // 🏷️ Header Row (Filters/Title)
+            // 🏷️ Header Section (Filters/Title)
             Container(
               margin: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    "Catalog",
-                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                  ),
-                  Icon(Icons.filter_list),
-                ],
-              ),
+              child: const ShopByRoomScreen(),
             ),
 
             // TODO: Add your Product Grid here

@@ -1,201 +1,229 @@
 package com.example.world_casa
 
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.MotionEvent
-import android.widget.FrameLayout
-import android.widget.HorizontalScrollView
-import android.widget.LinearLayout
-import android.widget.TextView
-import com.google.ar.core.Config
-import com.google.ar.core.Plane
-import com.google.ar.core.TrackingState
+import android.widget.*
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.google.ar.core.*
 import io.flutter.FlutterInjector
 import io.github.sceneview.ar.ARSceneView
 import io.github.sceneview.ar.node.AnchorNode
 import io.github.sceneview.math.Scale
 import io.github.sceneview.node.ModelNode
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
+import androidx.appcompat.app.AppCompatActivity
+class NativeArActivity : AppCompatActivity() {
 
-class NativeArActivity : Activity() {
     private lateinit var sceneView: ARSceneView
     private lateinit var statusText: TextView
     private lateinit var pickerRow: LinearLayout
-    private val mainScope = CoroutineScope(Dispatchers.Main)
+
     private var placedNodes = 0
     private val maxPlacedNodes = 3
+
     private lateinit var models: List<NativeArModel>
     private var selectedModelIndex = 0
 
     private val selectedModel: NativeArModel
-        get() = models[selectedModelIndex]
+        get() = models.getOrElse(selectedModelIndex) { models.first() }
+
+    companion object {
+        const val EXTRA_MODELS_JSON = "modelsJson"
+        private const val CAMERA_PERMISSION_REQUEST_CODE = 100
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        if (!hasCameraPermission()) {
+            requestCameraPermission()
+        } else {
+            initializeArScene()
+        }
+    }
+
+    // ================= PERMISSION =================
+
+    private fun hasCameraPermission(): Boolean {
+        return ContextCompat.checkSelfPermission(
+            this,
+            android.Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestCameraPermission() {
+        ActivityCompat.requestPermissions(
+            this,
+            arrayOf(android.Manifest.permission.CAMERA),
+            CAMERA_PERMISSION_REQUEST_CODE
+        )
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+
+        if (requestCode == CAMERA_PERMISSION_REQUEST_CODE &&
+            grantResults.isNotEmpty() &&
+            grantResults[0] == PackageManager.PERMISSION_GRANTED
+        ) {
+            initializeArScene()
+        } else {
+            Toast.makeText(this, "Camera permission required", Toast.LENGTH_LONG).show()
+            finish()
+        }
+    }
+
+    // ================= INIT =================
+
+    private fun initializeArScene() {
         models = parseModels(intent.getStringExtra(EXTRA_MODELS_JSON))
 
-        sceneView = ARSceneView(
-            context = this,
-            sessionConfiguration = { session, config ->
-                config.apply {
-                    planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
-                    lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                    depthMode = when (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                        true -> Config.DepthMode.AUTOMATIC
-                        false -> Config.DepthMode.DISABLED
-                    }
-                    focusMode = Config.FocusMode.AUTO
-                }
+        sceneView = ARSceneView(this).apply {
+            sessionConfiguration = { _, config ->
+                config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL
+                config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                config.focusMode = Config.FocusMode.AUTO
             }
-        )
+        }
 
+       // lifecycle.addObserver(sceneView)
+
+        setupUI()
+
+        sceneView.post {
+            if (!isFinishing) {
+                setupArListeners()
+            }
+        }
+    }
+
+    private fun setupUI() {
         statusText = TextView(this).apply {
             setTextColor(0xFFFFFFFF.toInt())
             setBackgroundColor(0x99000000.toInt())
             setPadding(28, 16, 28, 16)
+            text = "Initializing AR..."
         }
 
         pickerRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             setPadding(24, 18, 24, 18)
         }
+
         val pickerScroll = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             setBackgroundColor(0xCCFFFFFF.toInt())
-            addView(
-                pickerRow,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT
-                )
-            )
+            addView(pickerRow)
         }
 
         val root = FrameLayout(this).apply {
-            addView(
-                sceneView,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.MATCH_PARENT
-                )
-            )
-            addView(
-                statusText,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.TOP or Gravity.CENTER_HORIZONTAL
-                ).apply {
-                    topMargin = 36
-                    leftMargin = 24
-                    rightMargin = 24
-                }
-            )
-            addView(
-                pickerScroll,
-                FrameLayout.LayoutParams(
-                    FrameLayout.LayoutParams.MATCH_PARENT,
-                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                    Gravity.BOTTOM
-                )
-            )
+            addView(sceneView)
+            addView(statusText, FrameLayout.LayoutParams(-2, -2,
+                Gravity.TOP or Gravity.CENTER_HORIZONTAL).apply { topMargin = 48 })
+
+            addView(pickerScroll, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
         }
+
         setContentView(root)
-
-        renderModelPicker()
-        showStatus(initialStatusMessage())
-
-        sceneView.planeRenderer.isEnabled = true
-        sceneView.planeRenderer.isVisible = true
-        sceneView.onTrackingFailureChanged = { reason ->
-            if (reason != null) {
-                showStatus("AR tracking issue: ${reason.name}", isError = true)
-            } else {
-                showStatus("${selectedModel.label} selected. Tap a plane to place.")
-            }
-        }
-        sceneView.setOnGestureListener(
-            onSingleTapConfirmed = { motionEvent: MotionEvent, node ->
-                if (node != null) {
-                    true
-                } else {
-                    placeModelOnPlane(motionEvent)
-                    true
-                }
-            }
-        )
     }
 
-    private fun initialStatusMessage(): String {
-        val isEmulator = Build.FINGERPRINT.contains("generic") ||
-            Build.MODEL.contains("Emulator") ||
-            Build.MODEL.contains("sdk_gphone")
+    // ================= AR =================
 
-        return if (isEmulator) {
-            "Emulator detected. Use an ARCore AVD with Camera Back = VirtualScene."
-        } else {
-            "${selectedModel.label} selected. Tap a plane to place."
+    private fun setupArListeners() {
+        sceneView.planeRenderer.isVisible = true
+        sceneView.planeRenderer.isEnabled = true
+
+        sceneView.onTrackingFailureChanged = { reason ->
+            when (reason) {
+                null -> showStatus("${selectedModel.label} selected. Tap a plane to place.")
+                TrackingFailureReason.INSUFFICIENT_LIGHT -> showStatus("Too dark", true)
+                TrackingFailureReason.EXCESSIVE_MOTION -> showStatus("Move slower", true)
+                TrackingFailureReason.INSUFFICIENT_FEATURES -> showStatus("Point camera at textured surface", true)
+                else -> showStatus("Tracking issue: ${reason.name}", true)
+            }
         }
+
+        sceneView.setOnGestureListener(
+            onSingleTapConfirmed = { motionEvent: MotionEvent, node ->
+                if (node == null) {
+                    placeModelOnPlane(motionEvent)
+                }
+                true
+            }
+        )
+
+        renderModelPicker()
     }
 
     private fun placeModelOnPlane(motionEvent: MotionEvent) {
+
+        if (sceneView.cameraNode.trackingState != TrackingState.TRACKING) {
+            showStatus("Move device to detect surface")
+            return
+        }
+
         if (placedNodes >= maxPlacedNodes) {
-            showStatus("Too many objects. Restart AR to clear the scene.", isError = true)
+            showStatus("Limit reached!", true)
             return
         }
 
-        val frame = sceneView.frame ?: run {
-            showStatus("AR frame is not ready yet.", isError = true)
-            return
-        }
+        val frame = sceneView.frame ?: return
 
-        val planeHit = frame.hitTest(motionEvent).firstOrNull { hit ->
+        val hitResult = frame.hitTest(motionEvent).firstOrNull { hit ->
             val trackable = hit.trackable
-            trackable is Plane &&
-                trackable.trackingState == TrackingState.TRACKING &&
-                trackable.isPoseInPolygon(hit.hitPose)
-        } ?: run {
-            showStatus("No tracked plane at this position.", isError = true)
-            return
-        }
+            trackable is Plane && trackable.trackingState == TrackingState.TRACKING
+        } ?: return
 
         val model = selectedModel
+
         val modelAssetKey = FlutterInjector.instance()
             .flutterLoader()
             .getLookupKeyForAsset(model.assetPath)
 
-        showStatus("Loading ${model.label}...")
-        mainScope.launch {
-            val modelInstance = sceneView.modelLoader.loadModelInstance(modelAssetKey)
-                ?: run {
-                    showStatus("Failed to load ${model.label}.", isError = true)
-                    return@launch
+        lifecycleScope.launch {
+            try {
+                val modelInstance = withContext(Dispatchers.IO) {
+                    sceneView.modelLoader.loadModelInstance(modelAssetKey)
                 }
 
-            val anchorNode = AnchorNode(sceneView.engine, planeHit.createAnchor())
-            val modelNode = ModelNode(
-                modelInstance = modelInstance,
-                scaleToUnits = model.scaleToUnits
-            ).apply {
-                scale = Scale(1.0f)
-            }
+                modelInstance?.let {
+                    val anchorNode = AnchorNode(sceneView.engine, hitResult.createAnchor())
 
-            anchorNode.addChildNode(modelNode)
-            sceneView.addChildNode(anchorNode)
-            placedNodes += 1
-            showStatus("${model.label} placed. Tap another plane to add more.")
+                    val modelNode = ModelNode(modelInstance = it)
+                    val s = model.scaleToUnits
+                    modelNode.scale = Scale(s, s, s)
+
+                    anchorNode.addChildNode(modelNode)
+                    sceneView.addChildNode(anchorNode)
+
+                    placedNodes++
+                    showStatus("${model.label} placed!")
+                }
+
+            } catch (e: Exception) {
+                showStatus("Error: ${e.message}", true)
+            }
         }
     }
 
+    // ================= UI =================
+
     private fun renderModelPicker() {
         pickerRow.removeAllViews()
+
         models.forEachIndexed { index, model ->
             pickerRow.addView(
                 TextView(this).apply {
@@ -203,22 +231,24 @@ class NativeArActivity : Activity() {
                     textSize = 14f
                     gravity = Gravity.CENTER
                     setPadding(28, 18, 28, 18)
+
                     setTextColor(
-                        if (index == selectedModelIndex) 0xFFFFFFFF.toInt() else 0xFF222222.toInt()
+                        if (index == selectedModelIndex) 0xFFFFFFFF.toInt()
+                        else 0xFF222222.toInt()
                     )
+
                     setBackgroundColor(
-                        if (index == selectedModelIndex) 0xFF1E5EFF.toInt() else 0xFFE9ECF2.toInt()
+                        if (index == selectedModelIndex) 0xFF1E5EFF.toInt()
+                        else 0xFFE9ECF2.toInt()
                     )
+
                     setOnClickListener {
                         selectedModelIndex = index
                         renderModelPicker()
-                        showStatus("${model.label} selected. Tap a plane to place.")
+                        showStatus("${model.label} selected")
                     }
                 },
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-                ).apply {
+                LinearLayout.LayoutParams(-2, -2).apply {
                     rightMargin = 14
                 }
             )
@@ -228,19 +258,23 @@ class NativeArActivity : Activity() {
     private fun showStatus(message: String, isError: Boolean = false) {
         statusText.text = message
         statusText.setBackgroundColor(
-            if (isError) 0xCCB00020.toInt() else 0x99000000.toInt()
+            if (isError) 0xCCB00020.toInt()
+            else 0x99000000.toInt()
         )
     }
 
+    // ================= CLEANUP =================
+
     override fun onDestroy() {
-        mainScope.cancel()
-        sceneView.destroy()
+        if (::sceneView.isInitialized) {
+            try {
+                sceneView.destroy()
+            } catch (_: Exception) {}
+        }
         super.onDestroy()
     }
 
-    companion object {
-        const val EXTRA_MODELS_JSON = "modelsJson"
-    }
+    // ================= MODEL =================
 
     private data class NativeArModel(
         val label: String,
@@ -261,7 +295,7 @@ class NativeArActivity : Activity() {
                 val item = array.getJSONObject(index)
                 NativeArModel(
                     label = item.optString("label", "Model ${index + 1}"),
-                    assetPath = item.optString("assetPath", "assets/glb_models/Duck.glb"),
+                    assetPath = item.optString("assetPath", fallback[0].assetPath),
                     scaleToUnits = item.optDouble("scaleToUnits", 0.35).toFloat()
                 )
             }.ifEmpty { fallback }
