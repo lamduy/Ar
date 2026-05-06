@@ -24,18 +24,20 @@ class NativeArLauncher {
   static const MethodChannel _channel = MethodChannel('world_casa/native_ar');
 
   static const List<NativeArModel> defaultModels = [
-    NativeArModel(label: 'Duck', assetPath: 'assets/glb_models/Duck.glb'),
     NativeArModel(
-      label: 'Chair',
-      assetPath: 'assets/glb_models/b1_transformed.glb',
+      label: 'Duck',
+      assetPath: 'assets/glb_models/Duck.glb',
+      scaleToUnits: 0.5,
     ),
     NativeArModel(
-      label: 'WRC v3',
-      assetPath: 'assets/glb_models/WRC1025-808E_v3-transformed.glb',
+      label: 'Bed',
+      assetPath: 'assets/glb_models/b1_transformed-v1.glb',
+      scaleToUnits: 50,
     ),
     NativeArModel(
-      label: 'WRC v4',
-      assetPath: 'assets/glb_models/WRC1025-808E_v4-transformed.glb',
+      label: 'Bed jpeg',
+      assetPath: 'assets/glb_models/b1_transformed-jpeg.glb',
+      scaleToUnits: 50,
     ),
   ];
 

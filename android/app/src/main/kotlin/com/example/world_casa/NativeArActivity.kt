@@ -296,7 +296,7 @@ class NativeArActivity : AppCompatActivity() {
                 NativeArModel(
                     label = item.optString("label", "Model ${index + 1}"),
                     assetPath = item.optString("assetPath", fallback[0].assetPath),
-                    scaleToUnits = item.optDouble("scaleToUnits", 0.35).toFloat()
+                    scaleToUnits = item.optDouble("scaleToUnits", 0.5).toFloat()
                 )
             }.ifEmpty { fallback }
         } catch (_: Exception) {
